@@ -1,5 +1,7 @@
 # fetch
-faster neofetch
+faster neofetch 
 
-requires pci
-config in main.c (sorry)
+requires libpci 
+
+config in main.c (sorry) 
+
