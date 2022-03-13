@@ -53,7 +53,7 @@ int main(void) {
 	// Get # of pkgs (counting items in dir)
 		DIR *dir;
 		if ((dir = opendir(L_PKGMGR)) == NULL) {
-			printf("Invalid PKGMGR dir");
+			printf("Invalid PKGMGR dir\n");
 		} else {
 			while (readdir(dir) != NULL) ++packages;
 			free(dir);
@@ -64,7 +64,7 @@ int main(void) {
 		FILE *file;
 		unsigned int i;
 		char c;
-		if ((file = fopen(L_PRODUCTNAME, "r")) == NULL) { printf("Invalid PRODUCTNAME dir"); goto MACHINE_end; }
+		if ((file = fopen(L_PRODUCTNAME, "r")) == NULL) { printf("Invalid PRODUCTNAME dir\n"); goto MACHINE_end; }
 		i = 1;
 		while ((c = fgetc(file)) != '\n') {
 			*(machine++) = c;
@@ -72,7 +72,7 @@ int main(void) {
 		}
 		fclose(file);
 		*(machine++) = ' ';
-		if ((file = fopen(L_PRODUCTVER, "r")) == NULL) { printf("Invalid PRODUCTVER dir"); goto MACHINE_end; }
+		if ((file = fopen(L_PRODUCTVER, "r")) == NULL) { printf("Invalid PRODUCTVER dir\n"); goto MACHINE_end; }
 		while ((c = fgetc(file)) != '\n') {
 			*(machine++) = c;
 			if ((++i) >= STRSIZE) { printf("MACHINE name full\n"); goto CPU_end; }
@@ -82,7 +82,7 @@ int main(void) {
 		MACHINE_end:
 
 	// Get Distro name (parse release info)
-		if ((file = fopen(L_RELEASE, "r")) == NULL) { printf("Invalid RELEASE dir"); goto DISTRO_end; }
+		if ((file = fopen(L_RELEASE, "r")) == NULL) { printf("Invalid RELEASE dir\n"); goto DISTRO_end; }
 		i = 0;
 		while ((c = fgetc(file)) != '"') {;} // wait till first "
 		while ((c = fgetc(file)) != '"') {
@@ -94,7 +94,7 @@ int main(void) {
 		DISTRO_end:
 
 	// Get CPU (parse cpuinfo)
-		if ((file = fopen(L_CPUINFO, "r")) == NULL) { printf("Invalid CPUINFO dir"); goto CPU_end; }
+		if ((file = fopen(L_CPUINFO, "r")) == NULL) { printf("Invalid CPUINFO dir\n"); goto CPU_end; }
 		i = 0;
 		CPU_start:
 			while ((c = fgetc(file)) != ':') {;} // wait for 5 : (get to machine name)
