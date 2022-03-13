@@ -7,3 +7,9 @@ install:
 
 uninstall:
 	-rm "/usr/local/bin/fetch"
+
+r1000:
+	for i in {1..1000}; do ./fetch; done
+
+time:
+	time "make runathousand"

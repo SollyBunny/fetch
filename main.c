@@ -26,6 +26,14 @@
 		INFO_CPU,
 	};
 
+	unsigned int copystring(char *buf, unsigned int *p, char *str) {
+		unsigned int iter = 0;
+		do {
+			buf[*p] = str[iter];
+			++(*p);
+		} while (str[(++iter)] != '\0');
+	}
+
 /* Config */
 
 	#define PKG_PACMAN "pacman"
@@ -52,8 +60,9 @@
 	char *UNKNOWN = "UNKNOWN";
 
 	// Refer to https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797 for ansii escape codes
-	const char THEME [] = "\x1b[38;5;201m\x1b[1m"; // Pink & Bold
-	const char THEMER[] = "\x1b[0m"; // Reset Modes
+	char THEME [] = "\x1b[38;5;201m\x1b[1m"; // Pink & Bold
+	char THEMEL[] = "\x1b[38;5;51m\x1b[1m";  // Cyan & Bold
+	char THEMER[] = "\x1b[0m";               // Reset Modes
 
 	const char ascii[][15] = {
 		"      /\\      ",
@@ -201,34 +210,56 @@ int main(void) {
 		
 	}}
 
-	m = sizeof(info) / sizeof(enum INFO);
+	char *buf = malloc(256);
+	i = 0;
+	
+	buf[i] = ' '; ++i;
+	copystring(buf, &i, THEME);
+	copystring(buf, &i, pwd->pw_name);
+	copystring(buf, &i, THEMER);
+	buf[i] = '@'; ++i;
+	copystring(buf, &i, THEME);
+	copystring(buf, &i, uts->nodename); 
+	buf[i] = '\n'; ++i;
+	
+	if (sizeof(info) / sizeof(enum INFO) > sizeof(ascii) / sizeof(ascii[0])) {
+		m = ((sizeof(info) / sizeof(enum INFO)) - (sizeof(ascii) / sizeof(ascii[0]))) / 2;
+	} else {
+		m = 0;
+	}
 	for (unsigned int it = 0; it < sizeof(info) / sizeof(enum INFO); ++it) { 
-		fwrite(THEME, sizeof(char), sizeof(THEME), stdout);
-		printf("%d\n", m);
-		if (it < sizeof(ascii) / sizeof(ascii[0])) {
-			fwrite(ascii[it], sizeof(char), sizeof(ascii[0]), stdout);
-		} else {
-			fwrite(ascii[(sizeof(ascii) - sizeof(ascii[0])) / sizeof(ascii[0])], sizeof(char), sizeof(ascii[0]), stdout);
+		copystring(buf, &i, THEMEL);
+		if (it < m) {
+			goto PRINT_else;
+		} else if (it - m < sizeof(ascii) / sizeof(ascii[0])) {
+			copystring(buf, &i, (char *)ascii[it - m]);
+		} else { PRINT_else:
+			copystring(buf, &i, (char *)ascii[(sizeof(ascii) - sizeof(ascii[0])) / sizeof(ascii[0])]);
 		}
+		copystring(buf, &i, THEME);
 		switch (info[it]) {
-			case INFO_OS  : fputs("      OS", stdout); break;
-			case INFO_HOST: fputs("    Host", stdout); break;
-			case INFO_KRNL: fputs("  Kernel", stdout); break;
-			case INFO_PKGS: fputs("Packages", stdout); break;
-			case INFO_UP  : fputs("  Uptime", stdout); break;
-			case INFO_TIME: fputs("    Time", stdout); break;
-			case INFO_MEM : fputs("     MEM", stdout); break;
-			case INFO_CPU : fputs("     CPU", stdout); break;
-			default:        puts(UNKNOWN);
+			case INFO_OS  : copystring(buf, &i, "      OS"); break;
+			case INFO_HOST: copystring(buf, &i, "    Host"); break;
+			case INFO_KRNL: copystring(buf, &i, "  Kernel"); break;
+			case INFO_PKGS: copystring(buf, &i, "Packages"); break;
+			case INFO_UP  : copystring(buf, &i, "  Uptime"); break;
+			case INFO_TIME: copystring(buf, &i, "    Time"); break;
+			case INFO_MEM : copystring(buf, &i, "     MEM"); break;
+			case INFO_CPU : copystring(buf, &i, "     CPU"); break;
+			default:        copystring(buf, &i, UNKNOWN   );
 		}
-		fwrite(THEMER, sizeof(char), sizeof(THEMER), stdout);
-		fwrite(" : " , sizeof(char), 3,              stdout);
-		fwrite(THEME , sizeof(char), sizeof(THEME ), stdout);
-		puts(out[it]);
-		
+		copystring(buf, &i, THEMER);
+		buf[i] = ' '; ++i;
+		buf[i] = ':'; ++i;
+		buf[i] = ' '; ++i;
+		copystring(buf, &i, THEME);
+		copystring(buf, &i, out[it]);
+		buf[i] = '\n'; ++i;
 	}
 
 	fwrite(THEMER, sizeof(char), sizeof(THEMER), stdout);
+
+	fwrite(buf, sizeof(char), i, stdout);
 
 	if (sys != NULL) free(sys);
 	if (uts != NULL) free(uts);
