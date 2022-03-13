@@ -15,7 +15,6 @@
 
 /* Config */
 
-	#define L_PKGMGR       "/var/lib/pacman/local"
 	#define L_PRODUCTNAME  "/sys/devices/virtual/dmi/id/product_name"
 	#define L_PRODUCTVER   "/sys/devices/virtual/dmi/id/product_version"
 	#define L_RELEASE      "/etc/os-release"
@@ -35,35 +34,59 @@
 	#define ASCII6 " /   |  |  -\\ "
 	#define ASCII7 "/_-''    ''-_\\"
 
-int main(void) {
+// Variable Definitions
 
 	uid_t uid;
 	struct passwd *pwd;
 	unsigned int packages = 0;
-	char *machine = malloc(sizeof(char) * STRSIZE);
-	char *distro  = malloc(sizeof(char) * STRSIZE);
-	char *cpu     = malloc(sizeof(char) * STRSIZE);
-	struct sysinfo *info = malloc(sizeof(struct sysinfo));
-	struct utsname *host = malloc(sizeof(struct utsname));
+	char *machine;
+	char *distro ;
+	char *cpu    ;
+	struct sysinfo *info;
+	struct utsname *host;
+
+	FILE *file;
+	DIR  *dir;
+
+	unsigned int i;
+	char c;
+
+int main(void) {
+
+	// malloc
+		machine = malloc(sizeof(char) * STRSIZE);
+		distro  = malloc(sizeof(char) * STRSIZE);
+		cpu     = malloc(sizeof(char) * STRSIZE);
+		info    = malloc(sizeof(struct sysinfo));
+		host    = malloc(sizeof(struct utsname));
 
 	// Get UID / PWD
 		uid = getuid();
 		pwd = getpwuid(uid);
 
 	// Get # of pkgs (counting items in dir)
-		DIR *dir;
-		if ((dir = opendir(L_PKGMGR)) == NULL) {
-			printf("Invalid PKGMGR dir\n");
-		} else {
+		// Arch (pacman / yay)
+		if ((dir = opendir("/var/lib/pacman/local")) != NULL) { 
 			while (readdir(dir) != NULL) ++packages;
 			free(dir);
 			--packages;
+		// Debian (dpkg / apt)
+		} else if ((file = fopen("/var/lib/dpkg/status", "r")) != NULL) {
+			i = 0; // flag to see if newline has appeared twice
+			while ((c = fgetc(file)) != EOF) {
+				if (c != '\n') continue;
+				if (i == 0) {
+					i = 1;
+				} else {
+					++packages;
+					i = 0;
+				}
+			}
+			++packages;
+			free(file);
 		}
 
 	// Get machine info (concatonate 2 files)
-		FILE *file;
-		unsigned int i;
-		char c;
 		if ((file = fopen(L_PRODUCTNAME, "r")) == NULL) { printf("Invalid PRODUCTNAME dir\n"); goto MACHINE_end; }
 		i = 1;
 		while ((c = fgetc(file)) != '\n') {
