@@ -5,7 +5,8 @@
 	#include <stdlib.h>
 	#include <dirent.h>
 	#include <pwd.h>
-
+	#include <time.h>
+	
 	#include <sys/sysinfo.h>
 	#include <sys/utsname.h>
 	#include <sys/ioctl.h>
@@ -19,6 +20,7 @@
 		INFO_HOST,
 		INFO_KRNL,
 		INFO_PKGS,
+		INFO_UP,
 		INFO_TIME,
 		INFO_MEM,
 		INFO_CPU,
@@ -34,10 +36,9 @@
 		INFO_HOST,
 		INFO_KRNL,
 		INFO_PKGS,
+		INFO_UP,
 		INFO_TIME,
 		INFO_MEM,
-		INFO_CPU,
-		INFO_CPU,
 		INFO_CPU
 	};
 
@@ -158,8 +159,16 @@ int main(void) {
 				sprintf(out[it], "%u (" PKG_DKPG ")", m);
 			}
 			break;
-			
+
 		case INFO_TIME:
+			out[it] = malloc(sizeof(char) * STRSIZE);
+			time_t t;
+			t = time(NULL);
+			out[it] = asctime(localtime(&t));
+			out[it][24]= '\0';
+			break;
+			
+		case INFO_UP:
 			out[it] = malloc(sizeof(char) * STRSIZE);
 			sprintf(out[it], "%02ld:%02ld:%02ld", sys->uptime/(60*60), sys->uptime%(60*60)/60, sys->uptime%60);
 			break;
@@ -204,7 +213,8 @@ int main(void) {
 			case INFO_HOST: fputs("    Host", stdout); break;
 			case INFO_KRNL: fputs("  Kernel", stdout); break;
 			case INFO_PKGS: fputs("Packages", stdout); break;
-			case INFO_TIME: fputs("  Uptime", stdout); break;
+			case INFO_UP  : fputs("  Uptime", stdout); break;
+			case INFO_TIME: fputs("    Time", stdout); break;
 			case INFO_MEM : fputs("     MEM", stdout); break;
 			case INFO_CPU : fputs("     CPU", stdout); break;
 			default:        puts(UNKNOWN);
