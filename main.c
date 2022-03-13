@@ -201,8 +201,10 @@ int main(void) {
 		
 	}}
 
+	m = sizeof(info) / sizeof(enum INFO);
 	for (unsigned int it = 0; it < sizeof(info) / sizeof(enum INFO); ++it) { 
 		fwrite(THEME, sizeof(char), sizeof(THEME), stdout);
+		printf("%d\n", m);
 		if (it < sizeof(ascii) / sizeof(ascii[0])) {
 			fwrite(ascii[it], sizeof(char), sizeof(ascii[0]), stdout);
 		} else {
