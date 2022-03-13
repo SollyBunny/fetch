@@ -7,7 +7,6 @@
 	#include <pwd.h>
 
 	#include <sys/sysinfo.h>
-	#include <proc/sysinfo.h>
 	#include <sys/utsname.h>
 
 	extern uid_t getuid(void);
