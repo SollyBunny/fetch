@@ -52,10 +52,13 @@ int main(void) {
 
 	// Get # of pkgs (counting items in dir)
 		DIR *dir;
-		dir = opendir(L_PKGMGR);
-		while (readdir(dir) != NULL) ++packages;
-		free(dir);
-		--packages;
+		if ((dir = opendir(L_PKGMGR)) == NULL) {
+			printf("ohno\n");
+		} else {
+			while (readdir(dir) != NULL) ++packages;
+			free(dir);
+			--packages;
+		}
 
 	// Get machine info (concatonate 2 files)
 		FILE *file;
