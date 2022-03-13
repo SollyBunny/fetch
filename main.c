@@ -8,12 +8,38 @@
 
 	#include <sys/sysinfo.h>
 	#include <sys/utsname.h>
+	#include <sys/ioctl.h>
 
+	// So I don't have to include all of uinstd.h
 	extern uid_t getuid(void);
 	extern uid_t geteuid(void);
-	// So I don't have to include all of uinstd.h
+
+	enum INFO {
+		INFO_OS,
+		INFO_HOST,
+		INFO_KRNL,
+		INFO_PKGS,
+		INFO_TIME,
+		INFO_MEM,
+		INFO_CPU,
+	};
 
 /* Config */
+
+	#define PKG_PACMAN "pacman"
+	#define PKG_DKPG   "dkpg"
+
+	enum INFO info[] = {
+		INFO_OS,
+		INFO_HOST,
+		INFO_KRNL,
+		INFO_PKGS,
+		INFO_TIME,
+		INFO_MEM,
+		INFO_CPU,
+		INFO_CPU,
+		INFO_CPU
+	};
 
 	#define L_PRODUCTNAME  "/sys/devices/virtual/dmi/id/product_name"
 	#define L_PRODUCTVER   "/sys/devices/virtual/dmi/id/product_version"
@@ -22,145 +48,178 @@
 
 	#define STRSIZE 64
 
-	// Refer to https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797 for ansii escape codes
-	#define THEME  "\x1b[38;5;201m\x1b[1m" // Pink & Bold
-	#define THEMER "\x1b[0m" // Reset Modes
+	char *UNKNOWN = "UNKNOWN";
 
-	#define ASCII1 "      /\\      "
-	#define ASCII2 "     /  \\     "
-	#define ASCII3 "    /\\   \\    "
-	#define ASCII4 "   /      \\   "
-	#define ASCII5 "  /   ,,   \\  "
-	#define ASCII6 " /   |  |  -\\ "
-	#define ASCII7 "/_-''    ''-_\\"
+	// Refer to https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797 for ansii escape codes
+	const char THEME [] = "\x1b[38;5;201m\x1b[1m"; // Pink & Bold
+	const char THEMER[] = "\x1b[0m"; // Reset Modes
+
+	const char ascii[][15] = {
+		"      /\\      ",
+		"     /  \\     ",
+		"    /\\   \\    ",
+		"   /      \\   ",
+		"  /   ,,   \\  ",
+		" /   |  |  -\\ ",
+		"/_-''    ''-_\\",
+		"              "
+	};
+
 
 // Variable Definitions
 
-	uid_t uid;
 	struct passwd *pwd;
-	unsigned int packages = 0;
-	char *machine;
-	char *distro ;
-	char *cpu    ;
-	struct sysinfo *info;
-	struct utsname *host;
+	char *out[(sizeof(info) / sizeof(enum INFO)) * sizeof(void*)];
+
+	struct sysinfo *sys = NULL;
+	struct utsname *uts = NULL;
 
 	FILE *file;
 	DIR  *dir;
 
-	unsigned int i;
+	unsigned int i, m;
 	char c;
 
 int main(void) {
 
-	// malloc
-		machine = malloc(sizeof(char) * STRSIZE);
-		distro  = malloc(sizeof(char) * STRSIZE);
-		cpu     = malloc(sizeof(char) * STRSIZE);
-		info    = malloc(sizeof(struct sysinfo));
-		host    = malloc(sizeof(struct utsname));
+	pwd = getpwuid(getuid());
+	sys = malloc(sizeof(struct sysinfo));
+	uts = malloc(sizeof(struct utsname));
+	if (sysinfo(sys) == -1) printf("sysinfo failed\n");
+	if (uname(uts)   == -1) printf("uname failed\n"  );
 
-	// Get UID / PWD
-		uid = getuid();
-		pwd = getpwuid(uid);
+	for (unsigned int it = 0; it < sizeof(info) / sizeof(enum INFO); ++it) { switch (info[it]) {
 
-	// Get # of pkgs (counting items in dir)
-		// Arch (pacman / yay)
-		if ((dir = opendir("/var/lib/pacman/local")) != NULL) { 
-			while (readdir(dir) != NULL) ++packages;
-			free(dir);
-			--packages;
-		// Debian (dpkg / apt)
-		} else if ((file = fopen("/var/lib/dpkg/status", "r")) != NULL) {
-			i = 0; // flag to see if newline has appeared twice
-			while ((c = fgetc(file)) != EOF) {
-				if (c != '\n') {
-					i = 0;
-				} else if (i == 0) {
-					i = 1;
-				} else {
-					++packages;
-					i = 0;
-				}
+		case INFO_OS:
+			if ((file = fopen(L_RELEASE, "r")) == NULL) { printf("Invalid RELEASE dir\n"); break; }
+			out[it] = malloc(sizeof(char) * STRSIZE);
+			i = 1;
+			while ((c = fgetc(file)) != '"') {;} // wait till first "
+			while ((c = fgetc(file)) != '"') {
+				*(out[it]++) = c;
+				if ((++i) >= STRSIZE) { printf("DISTRO full\n"); break; }
 			}
-			++packages;
+			*(out[it]++) = ' ';
 			fclose(file);
-		}
+			for (m = 0; uts->machine[m] != '\0'; ++m) {
+				*(out[it]++) = uts->machine[m];
+				++i;
+			}
+			out[it] -= i;
+			break;
 
-	// Get machine info (concatonate 2 files)
-		if ((file = fopen(L_PRODUCTNAME, "r")) == NULL) { printf("Invalid PRODUCTNAME dir\n"); goto MACHINE_end; }
-		i = 1;
-		while ((c = fgetc(file)) != '\n') {
-			*(machine++) = c;
-			if ((++i) >= STRSIZE) { printf("MACHINE name full\n"); goto CPU_end; }
-		}
-		fclose(file);
-		*(machine++) = ' ';
-		if ((file = fopen(L_PRODUCTVER, "r")) == NULL) { printf("Invalid PRODUCTVER dir\n"); goto MACHINE_end; }
-		while ((c = fgetc(file)) != '\n') {
-			*(machine++) = c;
-			if ((++i) >= STRSIZE) { printf("MACHINE name full\n"); goto CPU_end; }
-		}
-		fclose(file);
-		machine -= i;
-		MACHINE_end:
+		case INFO_HOST:
+			if ((file = fopen(L_PRODUCTNAME, "r")) == NULL) { printf("Invalid PRODUCTNAME dir\n"); break; }
+			out[it] = malloc(sizeof(char) * STRSIZE);
+			i = 1;
+			while ((c = fgetc(file)) != '\n') {
+				*(out[it]++) = c;
+				if ((++i) >= STRSIZE) { printf("INFO_HOST full\n"); break; }
+			}
+			fclose(file);
+			*(out[it]++) = ' ';
+			if ((file = fopen(L_PRODUCTVER, "r")) == NULL) { printf("Invalid PRODUCTVER dir\n"); break; }
+			while ((c = fgetc(file)) != '\n') {
+				*(out[it]++) = c;
+				if ((++i) >= STRSIZE) { printf("INFO_HOST name full\n"); break; }
+			}
+			fclose(file);
+			out[it] -= i;
+			out[it][i] = '\0';
+			break;
 
-	// Get Distro name (parse release info)
-		if ((file = fopen(L_RELEASE, "r")) == NULL) { printf("Invalid RELEASE dir\n"); goto DISTRO_end; }
-		i = 0;
-		while ((c = fgetc(file)) != '"') {;} // wait till first "
-		while ((c = fgetc(file)) != '"') {
-			*(distro++) = c;
-			if ((++i) >= STRSIZE) { printf("DISTRO name full\n"); goto CPU_end; }
+		case INFO_KRNL:
+			out[it] = uts->release;
+			break;
+
+		case INFO_PKGS:
+			out[it] = malloc(sizeof(char) * STRSIZE);
+			m = 0;
+			// Arch (pacman / yay)
+			if ((dir = opendir("/var/lib/pacman/local")) != NULL) { 
+				while (readdir(dir) != NULL) ++m;
+				free(dir);
+				m -= 3;
+				sprintf(out[it], "%u (" PKG_PACMAN ")", m);
+			// Debian (dpkg / apt)
+			} else if ((file = fopen("/var/lib/dpkg/status", "r")) != NULL) {
+				i = 0; // flag to see if newline has appeared twice
+				while ((c = fgetc(file)) != EOF) {
+					if (c != '\n') {
+						i = 0;
+					} else if (i == 0) {
+						i = 1;
+					} else {
+						++m;
+						i = 0;
+					}
+				}
+				fclose(file);
+				sprintf(out[it], "%u (" PKG_DKPG ")", m);
+			}
+			break;
+			
+		case INFO_TIME:
+			out[it] = malloc(sizeof(char) * STRSIZE);
+			sprintf(out[it], "%02ld:%02ld:%02ld", sys->uptime/(60*60), sys->uptime%(60*60)/60, sys->uptime%60);
+			break;
+
+		case INFO_MEM:
+			out[it] = malloc(sizeof(char) * STRSIZE);
+			sprintf(out[it], "%luM / %luM", (sys->totalram-(sys->freeram * sys->mem_unit))/1024/1024, sys->totalram/1024/1024);
+			break;
+
+		case INFO_CPU:
+			if ((file = fopen(L_CPUINFO, "r")) == NULL) { printf("Invalid CPUINFO dir\n"); break; }
+			out[it] = malloc(sizeof(char) * STRSIZE);
+			i = 0;
+			CPU_start:
+				while ((c = fgetc(file)) != ':') {;} // wait for 5 : (get to machine name)
+				if ((++i) < 5) goto CPU_start;
+			i = 0;
+			fgetc(file);
+			while ((c = fgetc(file)) != '\n') {
+				*(out[it]++) = c;
+				if ((++i) >= STRSIZE) { printf("CPU full\n"); break; }
+			}
+			out[it] -= i;
+			out[it][i] = '\0';
+			fclose(file);
+			break;
+
+		default:
+			out[it] = UNKNOWN;
+		
+	}}
+
+	for (unsigned int it = 0; it < sizeof(info) / sizeof(enum INFO); ++it) { 
+		fwrite(THEME, sizeof(char), sizeof(THEME), stdout);
+		if (it < sizeof(ascii) / sizeof(ascii[0])) {
+			fwrite(ascii[it], sizeof(char), sizeof(ascii[0]), stdout);
+		} else {
+			fwrite(ascii[(sizeof(ascii) - sizeof(ascii[0])) / sizeof(ascii[0])], sizeof(char), sizeof(ascii[0]), stdout);
 		}
-		fclose(file);
-		distro -= i;
-		DISTRO_end:
-	
-	// Get CPU (parse cpuinfo)
-		if ((file = fopen(L_CPUINFO, "r")) == NULL) { printf("Invalid CPUINFO dir\n"); goto CPU_end; }
-		i = 0;
-		CPU_start:
-			while ((c = fgetc(file)) != ':') {;} // wait for 5 : (get to machine name)
-			if ((++i) < 5) goto CPU_start;
-		i = 0;
-		fgetc(file);
-		while ((c = fgetc(file)) != '\n') {
-			*(cpu++) = c;
-			if ((++i) >= STRSIZE) { printf("CPU name full\n"); goto CPU_end; }
+		switch (info[it]) {
+			case INFO_OS  : fputs("      OS", stdout); break;
+			case INFO_HOST: fputs("    Host", stdout); break;
+			case INFO_KRNL: fputs("  Kernel", stdout); break;
+			case INFO_PKGS: fputs("Packages", stdout); break;
+			case INFO_TIME: fputs("  Uptime", stdout); break;
+			case INFO_MEM : fputs("     MEM", stdout); break;
+			case INFO_CPU : fputs("     CPU", stdout); break;
+			default:        puts(UNKNOWN);
 		}
-		cpu -= i;
-		fclose(file);
-		CPU_end:
+		fwrite(THEMER, sizeof(char), sizeof(THEMER), stdout);
+		fwrite(" : " , sizeof(char), 3,              stdout);
+		fwrite(THEME , sizeof(char), sizeof(THEME ), stdout);
+		puts(out[it]);
+		
+	}
 
-	// Get sys info
-		if (sysinfo(info) == -1) printf("sysinfo failed\n");
-		if (uname(host)   == -1) printf("uname failed\n"  );
+	fwrite(THEMER, sizeof(char), sizeof(THEMER), stdout);
 
-	printf(
-THEME "              %s" THEMER " @ " THEME "%s" THEMER " %c\n"
-THEME ASCII1 " OS   " THEMER ": %s %s\n"
-THEME ASCII2 " Host " THEMER ": %s\n"
-THEME ASCII3 " Krnl " THEMER ": %s\n"
-THEME ASCII4 " Pkgs " THEMER ": %u\n"
-THEME ASCII5 " Time " THEMER ": %02ld:%02ld:%02ld\n"
-THEME ASCII6 " Mem  " THEMER ": %luM / %luM\n"
-THEME ASCII7 " CPU  " THEMER ": %s\n",
-		pwd->pw_name, host->nodename, uid == 0 ? '#' : '$',
-		distro, host->machine,
-		machine,
-		host->release,
-		packages,
-		info->uptime/(60*60), info->uptime%(60*60)/60, info->uptime%60,
-		(info->totalram-(info->freeram * info->mem_unit))/1024/1024, info->totalram/1024/1024,
-		cpu
-	);
-
-	free(machine);
-	free(distro );
-	free(cpu    );
-	free(info   );
-	free(host   );
+	if (sys != NULL) free(sys);
+	if (uts != NULL) free(uts);
 
 	return 0;
 	
