@@ -74,8 +74,9 @@ int main(void) {
 		} else if ((file = fopen("/var/lib/dpkg/status", "r")) != NULL) {
 			i = 0; // flag to see if newline has appeared twice
 			while ((c = fgetc(file)) != EOF) {
-				if (c != '\n') continue;
-				if (i == 0) {
+				if (c != '\n') {
+					i = 0;
+				} else if (i == 0) {
 					i = 1;
 				} else {
 					++packages;
