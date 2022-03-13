@@ -86,6 +86,22 @@ int main(void) {
 			free(file);
 		}
 
+	// Get CPU (parse cpuinfo)
+		if ((file = fopen(L_CPUINFO, "r")) == NULL) { printf("Invalid CPUINFO dir\n"); goto CPU_end; }
+		i = 0;
+		CPU_start:
+			while ((c = fgetc(file)) != ':') {;} // wait for 5 : (get to machine name)
+			if ((++i) < 5) goto CPU_start;
+		i = 0;
+		fgetc(file);
+		while ((c = fgetc(file)) != '\n') {
+			*(cpu++) = c;
+			if ((++i) >= STRSIZE) { printf("CPU name full\n"); goto CPU_end; }
+		}
+		cpu -= i;
+		fclose(file);
+		CPU_end:
+
 	// Get machine info (concatonate 2 files)
 		if ((file = fopen(L_PRODUCTNAME, "r")) == NULL) { printf("Invalid PRODUCTNAME dir\n"); goto MACHINE_end; }
 		i = 1;
@@ -115,22 +131,6 @@ int main(void) {
 		fclose(file);
 		distro -= i;
 		DISTRO_end:
-
-	// Get CPU (parse cpuinfo)
-		if ((file = fopen(L_CPUINFO, "r")) == NULL) { printf("Invalid CPUINFO dir\n"); goto CPU_end; }
-		i = 0;
-		CPU_start:
-			while ((c = fgetc(file)) != ':') {;} // wait for 5 : (get to machine name)
-			if ((++i) < 5) goto CPU_start;
-		i = 0;
-		fgetc(file);
-		while ((c = fgetc(file)) != '\n') {
-			*(cpu++) = c;
-			if ((++i) >= STRSIZE) { printf("CPU name full\n"); goto CPU_end; }
-		}
-		cpu -= i;
-		fclose(file);
-		CPU_end:
 
 	// Get sys info
 		if (sysinfo(info) == -1) printf("sysinfo failed\n");
