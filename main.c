@@ -53,7 +53,7 @@ int main(void) {
 	// Get # of pkgs (counting items in dir)
 		DIR *dir;
 		if ((dir = opendir(L_PKGMGR)) == NULL) {
-			printf("ohno\n");
+			printf("Invalid PKGMGR dir");
 		} else {
 			while (readdir(dir) != NULL) ++packages;
 			free(dir);
@@ -64,51 +64,54 @@ int main(void) {
 		FILE *file;
 		unsigned int i;
 		char c;
+		if ((file = fopen(L_PRODUCTNAME, "r")) == NULL) { printf("Invalid PRODUCTNAME dir"); goto MACHINE_end; }
 		i = 1;
-		file = fopen(L_PRODUCTNAME, "r");
 		while ((c = fgetc(file)) != '\n') {
 			*(machine++) = c;
-			if ((++i) >= STRSIZE) { printf("machine failed\n"); return -1; }
+			if ((++i) >= STRSIZE) { printf("MACHINE name full\n"); goto CPU_end; }
 		}
 		fclose(file);
 		*(machine++) = ' ';
-		file = fopen(L_PRODUCTVER, "r");
+		if ((file = fopen(L_PRODUCTVER, "r")) == NULL) { printf("Invalid PRODUCTVER dir"); goto MACHINE_end; }
 		while ((c = fgetc(file)) != '\n') {
 			*(machine++) = c;
-			if ((++i) >= STRSIZE) { printf("machine failed\n"); return -1; }
+			if ((++i) >= STRSIZE) { printf("MACHINE name full\n"); goto CPU_end; }
 		}
 		fclose(file);
 		machine -= i;
+		MACHINE_end:
 
 	// Get Distro name (parse release info)
+		if ((file = fopen(L_RELEASE, "r")) == NULL) { printf("Invalid RELEASE dir"); goto DISTRO_end; }
 		i = 0;
-		file = fopen(L_RELEASE, "r");
 		while ((c = fgetc(file)) != '"') {;} // wait till first "
 		while ((c = fgetc(file)) != '"') {
 			*(distro++) = c;
-			if ((++i) >= STRSIZE) { printf("distro failed\n"); return -1; }
+			if ((++i) >= STRSIZE) { printf("DISTRO name full\n"); goto CPU_end; }
 		}
 		fclose(file);
 		distro -= i;
+		DISTRO_end:
 
 	// Get CPU (parse cpuinfo)
+		if ((file = fopen(L_CPUINFO, "r")) == NULL) { printf("Invalid CPUINFO dir"); goto CPU_end; }
 		i = 0;
-		file = fopen(L_CPUINFO, "r");
-		CPULOOP_start:
+		CPU_start:
 			while ((c = fgetc(file)) != ':') {;} // wait for 5 : (get to machine name)
-			if ((++i) < 5) goto CPULOOP_start;
+			if ((++i) < 5) goto CPU_start;
 		i = 0;
 		fgetc(file);
 		while ((c = fgetc(file)) != '\n') {
 			*(cpu++) = c;
-			if ((++i) >= STRSIZE) { printf("CPU failed\n"); return -1; }
+			if ((++i) >= STRSIZE) { printf("CPU name full\n"); goto CPU_end; }
 		}
 		cpu -= i;
 		fclose(file);
+		CPU_end:
 
 	// Get sys info
-		if (sysinfo(info) == -1) { printf("sysinfo failed\n"); return -1; }
-		if (uname(host)   == -1) { printf("uname failed\n"  ); return -1; }
+		if (sysinfo(info) == -1) printf("sysinfo failed\n");
+		if (uname(host)   == -1) printf("uname failed\n"  );
 
 	printf(
 THEME "              %s" THEMER " @ " THEME "%s" THEMER " %c\n"
