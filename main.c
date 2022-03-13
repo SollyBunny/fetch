@@ -155,9 +155,11 @@ THEME ASCII7 " CPU  " THEMER ": %s\n",
 		cpu
 	);
 
-	free(info);
-	free(host);
 	free(machine);
+	free(distro );
+	free(cpu    );
+	free(info   );
+	free(host   );
 
 	return 0;
 	
