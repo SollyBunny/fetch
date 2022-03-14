@@ -65,6 +65,7 @@
 	#define STRSIZE 64
 
 	char *UNKNOWN   = "UNKNOWN";
+	char *ERROR     = "(error)";
 	char *SEPERATOR = " : ";
 
 	// Refer to https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797 for ansii escape codes
@@ -96,6 +97,15 @@
 
 	unsigned int i, m, p, asciioffset;
 	char c;
+	char *buf;
+
+	void _s_PKGMGR() {
+		copystring(buf, &p, "Packages");
+		copystring(buf, &p, THEMER);
+		copystring(buf, &p, SEPERATOR);
+		copystring(buf, &p, THEME);
+	}
+
 
 int main(void) {
 
@@ -116,7 +126,7 @@ int main(void) {
 	if (sysinfo(sys) == -1) printf("sysinfo failed\n");
 	if (uname(uts)   == -1) printf("uname failed\n"  );
 
-	char *buf = malloc(2048);
+	buf = malloc(2048);
 	p = 0;
 	
 	buf[p] = ' '; ++p;
@@ -133,28 +143,28 @@ int main(void) {
 	} else {
 		asciioffset = 0;
 	}
-	printf("%d\n", asciioffset);
 
-	for (unsigned int it = 0; it < infosize; ++it) { 
+	unsigned it;
+	for (it = 0; it < infosize; ++it) { 
 
-		copystring(buf, &p, THEMEL);
-		if (it < asciioffset) {
+		copystring(buf, &p, THEMEL); // Set Logo theme
+		if (it < asciioffset) { // If ascii is higher
 			goto PRINT_else;
-		} else if (it - asciioffset< sizeof(ascii) / sizeof(ascii[0])) {
+		} else if (it - asciioffset < sizeof(ascii) / sizeof(ascii[0])) {
 			copystring(buf, &p, (char *)ascii[it - asciioffset]);
-		} else { PRINT_else:
+		} else { PRINT_else: // If ascii is lower
 			copystring(buf, &p, (char *)ascii[(sizeof(ascii) - sizeof(ascii[0])) / sizeof(ascii[0])]);
 		}
-		copystring(buf, &p, THEME);
+		copystring(buf, &p, THEME); // Set Text theme
 
-		switch (info[it]) {
+		SWITCH_start: switch (info[it]) {
 
 			case INFO_OS:
+				if ((file = fopen(L_RELEASE, "r")) == NULL) goto SWITCH_err;
 				copystring(buf, &p, "      OS");
 				copystring(buf, &p, THEMER);
 				copystring(buf, &p, SEPERATOR);
 				copystring(buf, &p, THEME);
-				if ((file = fopen(L_RELEASE, "r")) == NULL) { printf("Invalid RELEASE dir\n"); continue; }
 				i = 1;
 				while ((c = fgetc(file)) != '"') {;} // wait till first "
 				while ((c = fgetc(file)) != '"') {
@@ -167,11 +177,13 @@ int main(void) {
 				break;
 
 			case INFO_HOST:
+				if ((file =        fopen(L_PRODUCTNAME, "r")) == NULL) goto SWITCH_err;
+				if ((dir  = (DIR *)fopen(L_PRODUCTVER , "r")) == NULL) goto SWITCH_err;
 				copystring(buf, &p, "    Host");
 				copystring(buf, &p, THEMER);
 				copystring(buf, &p, SEPERATOR);
 				copystring(buf, &p, THEME);
-				if ((file = fopen(L_PRODUCTNAME, "r")) == NULL) { printf("Invalid PRODUCTNAME dir\n"); continue; }
+				
 				i = 1;
 				while ((c = fgetc(file)) != '\n') {
 					buf[p] = c; ++p;
@@ -181,12 +193,11 @@ int main(void) {
 				fclose(file);
 				buf[p] = ' '; ++p;
 				
-				if ((file = fopen(L_PRODUCTVER, "r")) == NULL) { printf("Invalid PRODUCTVER dir\n"); continue; }
-				while ((c = fgetc(file)) != '\n') {
+				while ((c = fgetc((FILE *)dir)) != '\n') {
 					buf[p] = c; ++p;
 					// TODO buf size check
 				}
-				fclose(file);
+				fclose((FILE *)dir);
 				break;
 
 			case INFO_KRNL:
@@ -198,13 +209,10 @@ int main(void) {
 				break;
 
 			case INFO_PKGS:
-				copystring(buf, &p, "Packages");
-				copystring(buf, &p, THEMER);
-				copystring(buf, &p, SEPERATOR);
-				copystring(buf, &p, THEME);
 				m = 0;
 				// Arch (pacman / yay)
 				if ((dir = opendir("/var/lib/pacman/local")) != NULL) { 
+					_s_PKGMGR();
 					while (readdir(dir) != NULL) ++m;
 					free(dir);
 					m -= 3;
@@ -214,6 +222,7 @@ int main(void) {
 					copystring(buf, &p, "(" PKG_PACMAN ")");
 				// Debian (dpkg / apt)
 				} else if ((file = fopen("/var/lib/dpkg/status", "r")) != NULL) {
+					_s_PKGMGR();
 					i = 0; // flag to see if newline has appeared twice
 					while ((c = fgetc(file)) != EOF) {
 						if (c != '\n') {
@@ -230,6 +239,8 @@ int main(void) {
 					p += intsize(m);
 					buf[p] = ' '; ++p;
 					copystring(buf, &p, "(" PKG_DKPG ")");
+				} else {
+					goto SWITCH_err;
 				}
 				break;
 
@@ -241,7 +252,7 @@ int main(void) {
 				time_t t;
 				t = time(NULL);
 				copystring(buf, &p, asctime(localtime(&t)));
-				--p;
+				--p; // asctime places a '\n' at the end, get rid of it
 				break;
 				
 			case INFO_UP:
@@ -251,7 +262,7 @@ int main(void) {
 				copystring(buf, &p, THEME);
 				sprintf(buf + p, "%02ld:%02ld.%02ld", sys->uptime/(60*60), sys->uptime%(60*60)/60, sys->uptime%60);
 				p += 8;
-				if (sys->uptime > 99 * (60*60)) {
+				if (sys->uptime > 99 * (60*60)) { // if extra characters are present, account with buffer iter
 					p += longsize(sys->uptime/(60*60)) - 2;
 				}
 				break;
@@ -264,15 +275,15 @@ int main(void) {
 				sys->totalram /= 1024*1024;
 				sys->freeram  /= 1024*1024;
 				sprintf(buf + p, "%luM / %luM", sys->totalram - sys->freeram, sys->totalram);
-				p += 5 + longsize(sys->totalram - sys->freeram) + longsize(sys->totalram);
+				p += 5 + longsize(sys->totalram - sys->freeram) + longsize(sys->totalram); // calculate buffer movement
 				break;
 
 			case INFO_CPU:
+				if ((file = fopen(L_CPUINFO, "r")) == NULL) goto SWITCH_err;
 				copystring(buf, &p, "     CPU");
 				copystring(buf, &p, THEMER);
 				copystring(buf, &p, SEPERATOR);
 				copystring(buf, &p, THEME);
-				if ((file = fopen(L_CPUINFO, "r")) == NULL) { printf("Invalid CPUINFO dir\n"); continue; }
 				i = 0;
 				CPU_start:
 					while ((c = fgetc(file)) != ':') {;} // wait for 5 : (get to machine name)
@@ -288,15 +299,30 @@ int main(void) {
 
 			default:
 				copystring(buf, &p, UNKNOWN);
+				break;
+
+			SWITCH_err:
+				if ((++it) > infosize) goto SWITCH_end; // no more info to render
+				++asciioffset; // make ascii render properly
+				goto SWITCH_start;
 			
 		}
 		
 		copystring(buf, &p, THEME);
 		buf[p] = '\n'; ++p;
 		
-	}
+	} SWITCH_end:
 
-	fwrite(THEMER, sizeof(char), sizeof(THEMER), stdout);
+	if (it - asciioffset < sizeof(ascii) / sizeof(ascii[0]) - 1) { // Render any remaining ascii art
+		copystring(buf, &p, THEMEL);
+		while (it - asciioffset < sizeof(ascii) / sizeof(ascii[0]) - 1) {
+			copystring(buf, &p, (char *)ascii[it - asciioffset]);
+			buf[p] = '\n'; ++p;
+			++it;
+		}
+	}
+	copystring(buf, &p, THEMER);
+	
 	fwrite(buf, sizeof(char), p, stdout);
 
 	if (sys != NULL) free(sys);
