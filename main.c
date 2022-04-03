@@ -73,7 +73,7 @@ int main() {
 			distro_ascii = &(distroinfo[i].ascii);
 			goto l_distro_name_end;
 			
-		l_distro_name_loop_end: }
+		l_distro_name_loop_end: continue; } // continue for old gcc compat
 		// no matches
 	}
 	distro_col   = THEME;
