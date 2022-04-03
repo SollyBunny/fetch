@@ -1,8 +1,6 @@
 
 /* Includes */
 
-	#include <stdio.h>
-	#include <stdlib.h>
 	#include <dirent.h>
 	#include <pwd.h>
 	#include <time.h>
@@ -11,10 +9,10 @@
 	#include <sys/utsname.h>
 	#include <sys/ioctl.h>
 
+	#include "types.h"
+
 	#define PUTC(c) putchar(c)
 	#define PUTS(s) fputs(s, stdout)
-
-	typedef unsigned char bool;
 
 	// So I don't have to include all of uinstd.h
 	extern uid_t getuid(void);
@@ -26,40 +24,15 @@
 	struct sysinfo *sys = NULL;
 	struct utsname *uts = NULL;
 
-	char *osname      = NULL;
-	char *asciicol    = NULL;
-	bool releasevalid = 1;
+	char        *distro_name = NULL;
+	const char  *distro_col  = NULL;
+	const ASCII *distro_ascii;
 
 	FILE *file;
 	DIR  *dir;
 
 	unsigned int i, m, asciioffset;
-	char c;	
-	enum INFO {
-		INFO_DONE,
-		INFO_OS,
-		INFO_HOST,
-		INFO_KRNL,
-		INFO_PKGS,
-		INFO_UP,
-		INFO_TIME,
-		INFO_MEM,
-		INFO_CPU,
-	};
-
-	unsigned int intsize(unsigned int a) {
-		if (a < 10  ) return 1;
-		if (a < 100 ) return 2;
-		if (a < 1000) return 3;
-		return 4;
-	}
-
-	long int longsize(long int a) {
-		if (a < 10   ) return 1;
-		if (a < 100  ) return 2;
-		if (a < 1000 ) return 3;
-		return 4;
-	}
+	char c;
 
 	#include "config.h"
 
@@ -71,32 +44,42 @@ int main() {
 	if (sysinfo(sys) == -1) puts("sysinfo failed");
 	if (uname(uts)   == -1) puts("uname failed"  );
 	
-	if ((file = fopen(L_RELEASE, "r")) == NULL) {
-		osname   = "Linux";
-		asciicol = THEME;
-		releasevalid = 0;
-	} else {
-	
+	if ((file = fopen(L_RELEASE, "r")) != NULL) {
 		while ((c = fgetc(file)) != '"') {;} // wait till first "
 		i = 1;
 		while ((c = fgetc(file)) != '"') ++i;
-		osname = malloc(i * sizeof(char));
+		distro_name = malloc(i * sizeof(char));
 		fseek(file, -((int)i), SEEK_CUR);
 		while ((c = fgetc(file)) != '"') {
-			*osname = c;
-			++osname;
+			*distro_name = c;
+			++distro_name;
 		}
-		*osname = '\0';
-		osname -= i - 1;
-
-		printf("%c", fgetc(file));
-
+		*distro_name = '\0';
+		distro_name -= i - 1;
 		fclose(file);
+		// find matching data
+		for (i = 1; i < (sizeof(distroinfo) / sizeof(distroinfo[0])); ++i) {
+			// compare distro_name & distroinfo[i].name
+			#define s1 distro_name
+			#define s2 distroinfo[i].name
+				m = 0;
+				do {
+					if (s1[m] != s2[m]) goto l_distro_name_loop_end;
+					++m;	
+				} while (s1[m] != '\0' && s2[m] != '\0');
+			#undef s1
+			#undef s2
+			distro_col   = distroinfo[i].theme;
+			distro_ascii = &(distroinfo[i].ascii);
+			goto l_distro_name_end;
+			
+		l_distro_name_loop_end: }
+		// no matches
 	}
-
-	return 0;
-
-	PUTC(' ');
+	distro_col   = THEME;
+	distro_ascii = &(distroinfo[0].ascii);
+	l_distro_name_end:
+	
 	PUTS(THEME);
 	PUTS(pwd->pw_name);
 	PUTC('@');
@@ -107,11 +90,15 @@ int main() {
 	while (1) {
 
 		if (info[it] == INFO_DONE) goto l_loopend;
-
-		PUTS(asciicol); // Set Logo theme
-		PUTS(ascii[it - asciioffset]);
-		PUTS(THEMER);
-		PUTS(THEME); // Set Text theme
+		
+		if (it - asciioffset < ASCIIHEIGHT) {
+			PUTS(distro_col); // Set Logo theme
+			PUTS(distro_ascii->d[it - asciioffset]);
+			PUTS(THEMER);
+			PUTS(THEME); // Set Text theme
+		} else {
+			PUTS(ASCIIEMPTY);
+		}
 
 		l_switchstart: switch (info[it]) {
 
@@ -119,7 +106,7 @@ int main() {
 				PUTS(INFO_NAME_OS);
 				PUTS(SEPERATOR);
 				PUTS(THEME);
-				PUTS(osname);
+				PUTS((distro_name == NULL) ? distroinfo[0].name : distro_name);
 				PUTC(' ');
 				PUTS(&uts->machine[m]);
 				break;
@@ -234,21 +221,19 @@ int main() {
 	} l_loopend:
 
 	it -= asciioffset;
-	if (it < sizeof(ascii) / sizeof(ascii[0]) - 1) { // Render any remaining ascii art
-		PUTS(asciicol);
-		while (it < sizeof(ascii) / sizeof(ascii[0]) - 1) {
-			PUTS(ascii[it]);
+	if (it < ASCIIHEIGHT- 1) { // Render any remaining ascii art
+		PUTS(distro_col);
+		while (it < ASCIIHEIGHT - 1) {
+			PUTS(distro_ascii->d[it]);
 			++it;
 		}
 	}
 	
 	PUTS(THEMER);
 	
-	if (sys != NULL) free(sys);
-	if (uts != NULL) free(uts);
-	if (releasevalid == 1) {
-		free(osname);
-	}
+	if (sys         != NULL) free(sys        );
+	if (uts         != NULL) free(uts        );
+	if (distro_name != NULL) free(distro_name);
 
 	return 0;
 	

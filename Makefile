@@ -1,14 +1,21 @@
+
+CC = gcc
+
 build:
 ifeq ("$(t)","")
-	gcc main.c -o fetch -s -O3
+	${CC} main.c -o fetch -s -O3
 else
 	$(SHELL) -c "time make _time"
 endif
+
 _time:
 	for i in {1..$(t)}; do ./fetch; done
 
+run: build
+	./fetch
+
 valgrind:
-	gcc main.c -o fetch -Wall -ggdb3 -g
+	${CC} main.c -o fetch -Wall -ggdb3 -g
 	valgrind --leak-check=full \
 	         --show-leak-kinds=all \
 	         --track-origins=yes \

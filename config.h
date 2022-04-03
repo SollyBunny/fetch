@@ -1,4 +1,6 @@
 
+#include "types.h"
+
 #define PKG_PACMAN "pacman"
 #define PKG_DKPG   "dkpg"
 
@@ -31,20 +33,50 @@ enum INFO info[] = {
 #define L_RELEASE      "/etc/os-release"
 #define L_CPUINFO      "/proc/cpuinfo"
 
-char *UNKNOWN   = "UNKNOWN";
-char *SEPERATOR = "\x1b[0m : ";
-
 // Refer to https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797 for ansii escape codes
-char *THEME  = "\x1b[38;5;201m";       // Pink
-char *THEMER = "\x1b[0m;";             // Reset
+const char *UNKNOWN   = "UNKNOWN";
+const char *SEPERATOR = "\x1b[0m : ";
+const char *THEME     = "\x1b[38;5;201m";  // Pink
+const char *THEMER    = "\x1b[0m";         // Reset
 
-char ascii[][15] = {
-	"      /\\      ",
-	"     /  \\     ",
-	"    /\\   \\    ",
-	"   /      \\   ",
-	"  /   ,,   \\  ",
-	" /   |  |  -\\ ",
-	"/_-''    ''-_\\",
-	"              "
-}; // arch
+const struct {
+	const char *name;
+	const char *theme;
+	const ASCII ascii;
+} distroinfo[] = { {
+	"Linux",
+	NULL,
+	{ {
+		"      ___     ",
+		"     (.· |    ",
+		"     (<> |    ",
+		"    / __  \\   ",
+		"   ( /  \\ /|  ",
+		"  _/\\ __)/_)  ",
+		"  \\/-____\\/   ",
+	} }
+}, {
+	"Arch Linux",
+	"\x1b[38;2;23;147;209m",
+	{ {
+		"      /\\      ",
+		"     /  \\     ",
+		"    /\\   \\    ",
+		"   /      \\   ",
+		"  /   ,,   \\  ",
+		" /   |  |  -\\ ",
+		"/_-''    ''-_\\",
+	} }
+}, {
+	"Ubuntu",
+	"\x1b[38;2;233;84;32m",
+	{ {
+		"          _   ",
+		"      ---(_)  ",
+		"  _/  ---  \\ ",
+		" (_) |   |   |",
+		"   \\  --- _/ ",
+		"      ---(_)  ",
+		"              ",
+	} }
+} };
