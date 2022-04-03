@@ -1,5 +1,11 @@
-main.o:
+build:
+ifeq ("$(t)","")
 	gcc main.c -o fetch -s -O3
+else
+	$(SHELL) -c "time make _time"
+endif
+_time:
+	for i in {1..$(t)}; do ./fetch; done
 
 valgrind:
 	gcc main.c -o fetch -Wall -ggdb3 -g
@@ -17,9 +23,3 @@ install:
 
 uninstall:
 	-rm "/usr/local/bin/fetch"
-
-r1000:
-	for i in {1..1000}; do ./fetch; done
-
-time:
-	time make runathousand

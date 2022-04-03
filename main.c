@@ -11,6 +11,11 @@
 	#include <sys/utsname.h>
 	#include <sys/ioctl.h>
 
+	#define PUTC(c) putchar(c)
+	#define PUTS(s) fputs(s, stdout)
+
+	typedef unsigned char bool;
+
 	// So I don't have to include all of uinstd.h
 	extern uid_t getuid(void);
 	extern uid_t geteuid(void);
@@ -21,13 +26,15 @@
 	struct sysinfo *sys = NULL;
 	struct utsname *uts = NULL;
 
+	char *osname      = NULL;
+	char *asciicol    = NULL;
+	bool releasevalid = 1;
+
 	FILE *file;
 	DIR  *dir;
 
-	unsigned int i, m, p, asciioffset;
-	char c;
-	char *buf;
-	
+	unsigned int i, m, asciioffset;
+	char c;	
 	enum INFO {
 		INFO_DONE,
 		INFO_OS,
@@ -39,14 +46,6 @@
 		INFO_MEM,
 		INFO_CPU,
 	};
-
-	void copystring(char *str) {
-		char *iter = str;
-		do {
-			buf[p] = *iter;
-			++(p);
-		} while (*(++iter) != '\0');
-	}
 
 	unsigned int intsize(unsigned int a) {
 		if (a < 10  ) return 1;
@@ -69,86 +68,95 @@ int main() {
 	pwd = getpwuid(getuid());
 	sys = malloc(sizeof(struct sysinfo));
 	uts = malloc(sizeof(struct utsname));
-	sysinfo(sys);
-	uname(uts);
-	// if (sysinfo(sys) == -1) printf("sysinfo failed\n");
-	// if (uname(uts)   == -1) printf("uname failed\n"  );
-
-	buf = malloc(2048);
-	p = 0;
+	if (sysinfo(sys) == -1) puts("sysinfo failed");
+	if (uname(uts)   == -1) puts("uname failed"  );
 	
-	buf[p] = ' '; ++p;
-	copystring(THEME);
-	copystring(pwd->pw_name);
-	buf[p] = '@'; ++p;
-	copystring(THEME);
-	copystring(uts->nodename); 
-	buf[p] = '\n'; ++p;
+	if ((file = fopen(L_RELEASE, "r")) == NULL) {
+		osname   = "Linux";
+		asciicol = THEME;
+		releasevalid = 0;
+	} else {
+	
+		while ((c = fgetc(file)) != '"') {;} // wait till first "
+		i = 1;
+		while ((c = fgetc(file)) != '"') ++i;
+		osname = malloc(i * sizeof(char));
+		fseek(file, -((int)i), SEEK_CUR);
+		while ((c = fgetc(file)) != '"') {
+			*osname = c;
+			++osname;
+		}
+		*osname = '\0';
+		osname -= i - 1;
 
+		printf("%c", fgetc(file));
+
+		fclose(file);
+	}
+
+	return 0;
+
+	PUTC(' ');
+	PUTS(THEME);
+	PUTS(pwd->pw_name);
+	PUTC('@');
+	PUTS(uts->nodename); 
+	PUTC('\n');
+	
 	unsigned it = 0;
 	while (1) {
 
 		if (info[it] == INFO_DONE) goto l_loopend;
 
-		copystring(THEMEL); // Set Logo theme
-		copystring((char *)ascii[it - asciioffset]);
-		copystring(THEME); // Set Text theme
+		PUTS(asciicol); // Set Logo theme
+		PUTS(ascii[it - asciioffset]);
+		PUTS(THEMER);
+		PUTS(THEME); // Set Text theme
 
 		l_switchstart: switch (info[it]) {
 
 			case INFO_OS:
-				if ((file = fopen(L_RELEASE, "r")) == NULL) goto l_switcherr;
-				copystring(INFO_NAME_HOST);
-				copystring(SEPERATOR);
-				copystring(THEME);
-				i = 1;
-				while ((c = fgetc(file)) != '"') {;} // wait till first "
-				while ((c = fgetc(file)) != '"') {
-					buf[p] = c; ++p;
-					// TODO buf size check
-				}
-				fclose(file);
-				buf[p] = ' '; ++p;
-				copystring(&uts->machine[m]);
+				PUTS(INFO_NAME_OS);
+				PUTS(SEPERATOR);
+				PUTS(THEME);
+				PUTS(osname);
+				PUTC(' ');
+				PUTS(&uts->machine[m]);
 				break;
 
 			case INFO_HOST:
 				if ((file =        fopen(L_PRODUCTNAME, "r")) == NULL) goto l_switcherr;
 				if ((dir  = (DIR *)fopen(L_PRODUCTVER , "r")) == NULL) goto l_switcherr;
-				copystring(INFO_NAME_HOST);
-				copystring(SEPERATOR);
-				copystring(THEME);
-				
+				PUTS(INFO_NAME_HOST);
+				PUTS(SEPERATOR);
+				PUTS(THEME);
 				i = 1;
-				while ((c = fgetc(file)) != '\n') {
-					buf[p] = c; ++p;
-					// TODO buf size check
-				}
-				
+				while ((c = fgetc(file)) != '\n') PUTC(c);
 				fclose(file);
-				buf[p] = ' '; ++p;
-				
-				while ((c = fgetc((FILE *)dir)) != '\n') {
-					buf[p] = c; ++p;
-					// TODO buf size check
-				}
+				PUTC(' ');
+				while ((c = fgetc((FILE *)dir)) != '\n') PUTC(c);
 				fclose((FILE *)dir);
 				break;
 
 			case INFO_KRNL:
-				copystring(INFO_NAME_KRNL);
-				copystring(SEPERATOR);
-				copystring(THEME);
-				copystring(uts->release);
+				PUTS(INFO_NAME_KRNL);
+				PUTS(SEPERATOR);
+				PUTS(THEME);
+				PUTS(uts->release);
 				break;
 
 			case INFO_PKGS:
+				PUTS(INFO_NAME_PKGS);
+				PUTS(SEPERATOR);
+				PUTS(THEME);
 				m = 0;
 				// Arch (pacman / yay)
 				if ((dir = opendir("/var/lib/pacman/local")) != NULL) { 
 					while (readdir(dir) != NULL) ++m;
 					free(dir);
 					m -= 3;
+					printf("%u", m);
+					PUTS(" (" PKG_PACMAN ")");
 				// Debian (dpkg / apt) 
 				} else if ((file = fopen("/var/lib/dpkg/status", "r")) != NULL) {
 					i = 0; // flag to see if newline has appeared twice
@@ -163,69 +171,55 @@ int main() {
 						}
 					}
 					fclose(file);
-				} else {
-					goto l_switcherr;
-				}
-				copystring(INFO_NAME_PKGS);
-				copystring(SEPERATOR);
-				copystring(THEME);
-				sprintf(buf + p, "%u", m);
-				p += intsize(m);
-				buf[p] = ' '; ++p;
-				copystring("(" PKG_PACMAN ")");
+					printf("%u", m);
+					PUTS(" (" PKG_DKPG ")");
+				} else goto l_switcherr;
 				break;
 
 			case INFO_UP:
-				copystring(INFO_NAME_UP);
-				copystring(SEPERATOR);
-				copystring(THEME);
-				sprintf(buf + p, "%02ld:%02ld.%02ld", sys->uptime/(60*60), sys->uptime%(60*60)/60, sys->uptime%60);
-				p += 8;
-				if (sys->uptime > 99 * (60*60)) { // if extra characters are present, account with buffer iter
-					p += longsize(sys->uptime/(60*60)) - 2;
-				}
+				PUTS(INFO_NAME_UP);
+				PUTS(SEPERATOR);
+				PUTS(THEME);
+				printf("%02ld:%02ld.%02ld", sys->uptime/(60*60), sys->uptime%(60*60)/60, sys->uptime%60);
 				break;
 
 			case INFO_TIME:
-				copystring(INFO_NAME_TIME);
-				copystring(SEPERATOR);
-				copystring(THEME);
-				time_t t;
-				t = time(NULL);
-				copystring(asctime(localtime(&t)));
-				--p; // asctime places a '\n' at the end, get rid of it
+				PUTS(INFO_NAME_TIME);
+				PUTS(SEPERATOR);
+				PUTS(THEME);
+				time_t tnow = time(NULL);;
+				char *tbuf = malloc(DATE_BUFSIZE * sizeof(char*));
+				strftime(tbuf, DATE_BUFSIZE, DATE_FORMAT, localtime(&tnow));
+				PUTS(tbuf);
+				free(tbuf);
 				break;
 				
 			case INFO_MEM:
-				copystring(INFO_NAME_MEM);
-				copystring(SEPERATOR);
-				copystring(THEME);
+				PUTS(INFO_NAME_MEM);
+				PUTS(SEPERATOR);
+				PUTS(THEME);
 				sys->totalram /= 1024*1024;
 				sys->freeram  /= 1024*1024;
-				sprintf(buf + p, "%luM / %luM", sys->totalram - sys->freeram, sys->totalram);
-				p += 5 + longsize(sys->totalram - sys->freeram) + longsize(sys->totalram); // calculate buffer movement
+				printf("%luMiB / %luMiB", sys->totalram - sys->freeram, sys->totalram);
 				break;
 
 			case INFO_CPU:
 				if ((file = fopen(L_CPUINFO, "r")) == NULL) goto l_switcherr;
-				copystring(INFO_NAME_CPU);
-				copystring(SEPERATOR);
-				copystring(THEME);
+				PUTS(INFO_NAME_CPU);
+				PUTS(SEPERATOR);
+				PUTS(THEME);
 				i = 0;
 				CPU_start:
 					while ((c = fgetc(file)) != ':') {;} // wait for 5 : (get to machine name)
 					if ((++i) < 5) goto CPU_start;
 				i = 0;
 				fgetc(file);
-				while ((c = fgetc(file)) != '\n') {
-					buf[p] = c; ++p;
-					// TODO buf size check
-				}
+				while ((c = fgetc(file)) != '\n') PUTC(c);
 				fclose(file);
 				break;
 
 			default: 
-				copystring(UNKNOWN);
+				PUTS(UNKNOWN);
 				break;
 
 			l_switcherr:
@@ -234,27 +228,27 @@ int main() {
 				goto l_switchstart;
 		}
 		
-		buf[p] = '\n'; ++p;
+		PUTC('\n');
 		++it;
 		
 	} l_loopend:
 
 	it -= asciioffset;
 	if (it < sizeof(ascii) / sizeof(ascii[0]) - 1) { // Render any remaining ascii art
-		copystring(THEMEL);
+		PUTS(asciicol);
 		while (it < sizeof(ascii) / sizeof(ascii[0]) - 1) {
-			copystring(ascii[it]);
-			buf[p] = '\n'; ++p;
+			PUTS(ascii[it]);
 			++it;
 		}
 	}
 	
-	copystring("\x1b[0m");
-	fwrite(buf, sizeof(char), p, stdout);
-	free(buf);
+	PUTS(THEMER);
 	
 	if (sys != NULL) free(sys);
 	if (uts != NULL) free(uts);
+	if (releasevalid == 1) {
+		free(osname);
+	}
 
 	return 0;
 	

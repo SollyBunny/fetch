@@ -2,6 +2,9 @@
 #define PKG_PACMAN "pacman"
 #define PKG_DKPG   "dkpg"
 
+#define DATE_BUFSIZE 24
+#define DATE_FORMAT  "%a %Y %m %d %H:%M.%S"
+
 #define INFO_NAME_OS   "      OS"
 #define INFO_NAME_HOST "    Host"
 #define INFO_NAME_KRNL "  Kernel"
@@ -33,7 +36,7 @@ char *SEPERATOR = "\x1b[0m : ";
 
 // Refer to https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797 for ansii escape codes
 char *THEME  = "\x1b[38;5;201m";       // Pink
-char *THEMEL = "\x1b[38;5;51m\x1b[1m"; // Cyan & Bold
+char *THEMER = "\x1b[0m;";             // Reset
 
 char ascii[][15] = {
 	"      /\\      ",
