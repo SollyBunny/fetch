@@ -8,7 +8,7 @@
 
 #ifndef _TYPES_HEADER
 	#define _TYPES_HEADER
-
+	
 	#define ASCIIHEIGHT 7
 	#define ASCIIEMPTY "              "
 	typedef struct {
