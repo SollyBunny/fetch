@@ -298,7 +298,9 @@ int main(int argc, char *argv[]) {
 					fclose(file);
 					printf("%u", m);
 					PUTS(" (" PKG_DKPG ")");
-				} else goto l_switcherr;
+				} else {
+					PUTS("Unknown\n");
+				}
 				break;
 
 			case INFO_UP:
