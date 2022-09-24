@@ -16,15 +16,21 @@
 	} ASCII;
 	
 	enum INFO {
-		INFO_DONE,
-		INFO_OS,
-		INFO_HOST,
-		INFO_KRNL,
-		INFO_PKGS,
-		INFO_UP,
-		INFO_TIME,
-		INFO_MEM,
-		INFO_CPU,
+		INFO_OS   = 'o',
+		INFO_HOST = 'h',
+		INFO_SH   = 's',
+		INFO_KRNL = 'k',
+		INFO_PKGS = 'p',
+		INFO_UP   = 'u',
+		INFO_TIME = 't',
+		INFO_MEM  = 'm',
+		INFO_CPU  = 'c',
+		INFO_GPU  = 'g',
+		INFO_DONE = 0,
 	};
+
+	#define PCI_FULL 2
+	#define PCI_DL 1
+	#define PCI_NONE 0
 	
 #endif

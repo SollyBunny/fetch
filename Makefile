@@ -11,16 +11,17 @@ else
 endif
 
 _build:
-	${CC} main.c -o "$(EXECUTABLE)" -s -O3
+	${CC} main.c -o "$(EXECUTABLE)" -s -O3 -lpci
 
 _time: _build
-	for i in {1..$(t)}; do ./${EXECUTABLE}; done
+	for i in {1..$(t)}; do ./fetch ${arg1} ${arg2}; done
 
 run: build
 	"./$(EXECUTABLE)" ${arg1} ${arg2}
 
 valgrind:
-	${CC} main.c -o ${EXECUTABLE} -Wall -ggdb3 -g
+	${CC} main.c -o ${EXECUTABLE} -Wall -ggdb3 -g -lpci
+	-export DEBUGINFOD_URLS="https://debuginfod.archlinux.org";\
 	valgrind --leak-check=full \
 	         --show-leak-kinds=all \
 	         --track-origins=yes \
