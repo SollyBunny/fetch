@@ -1,6 +1,6 @@
 
 PREFIX = /usr/local
-CC = gcc
+CC = cc
 EXECUTABLE = fetch
 
 build:
