@@ -136,6 +136,7 @@ int main(int argc, char *argv[]) {
 				case 't':
 					if ((++i) == argc) goto l_arg_not_enough;
 					THEME = argv[i];
+					do_themeing = 2;
 					break;
 				default:
 					printf("Unknown flag: %s\n", argv[i]);
@@ -153,6 +154,12 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	l_argend:
+
+	if (do_themeing != 2) { // check for COLOR envvar
+		char *color = getenv("COLOR");
+		if (color)
+			THEME = color;
+	}
 
 	pwd = getpwuid(getuid());
 	sys = malloc(sizeof(struct sysinfo));
@@ -299,7 +306,7 @@ int main(int argc, char *argv[]) {
 					printf("%u", m);
 					PUTS(" (" PKG_DKPG ")");
 				} else {
-					PUTS("Unknown\n");
+					PUTS("Unknown");
 				}
 				break;
 

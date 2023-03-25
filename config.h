@@ -35,8 +35,8 @@
 #define L_CPUINFO      "/proc/cpuinfo"
 
 // Refer to https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797 for ansii escape codes
-char       *THEME     = "[38;5;201m";  // Pink
-const char *THEMER    = "[0m";         // Reset
+char       *THEME     = "[39m";  // Default
+const char *THEMER    = "[0m";   // Reset
 char       *SEPERATOR = "\x1b[0m : ";
 const char  ESCAPE    = '\x1B';
 
@@ -80,6 +80,18 @@ struct {
 		"  /   ,,   \\  ",
 		" /   |  |  -\\ ",
 		"/_-''    ''-_\\",
+	} }
+}, {
+	"Alpine Linux",
+	"\x1b[38;2;20;88;125m",
+	{ {
+		"     /\\ /\\    ",
+		"    /  \\  \\   ",
+		"   /|   \\  \\  ",
+		"  / |    \\  \\ ",
+		" /\\_|     \\  \\",
+		"              ",
+		"              ",
 	} }
 }, {
 	"Ubuntu",
