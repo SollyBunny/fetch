@@ -70,5 +70,5 @@ Run `fetch [DISTRO] [FLAGS]`
 ### Distro:
 See [config](#Distro Info) for supported distros
 
-### Problems
+## Problems
 My code is perfect, no problems at all!
