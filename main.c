@@ -23,6 +23,7 @@
 	#define PUTC(c) putchar(c)
 	#define PUTS(s) fputs((s), stdout)
 	#define ESCS(s) putchar(ESCAPE), PUTS(s)
+	#define LEN(n) (sizeof(n) / sizeof(n[0]))
 
 	// So I don't have to include all of uinstd.h
 	extern uid_t getuid(void);
@@ -52,7 +53,6 @@
 	DIR  *dir;
 
 	enum INFO *info = info_default; 
-
 
 int main(int argc, char *argv[]) {
 
@@ -87,6 +87,7 @@ int main(int argc, char *argv[]) {
 						"	-t [THEME]     Set the theme"
 						"Distros:\n"
 						"	Arch Linux\n"
+						"	Alpine\n"
 						"	Ubuntu\n"
 						"	Fedora\n"
 					);
@@ -322,8 +323,8 @@ int main(int argc, char *argv[]) {
 				PUTS(SEPERATOR);
 				if (do_themeing) ESCS(THEME);
 				time_t tnow = time(NULL);
-				char *tbuf = malloc(DATE_BUFSIZE * sizeof(char*));
-				strftime(tbuf, DATE_BUFSIZE, DATE_FORMAT, localtime(&tnow));
+				char *tbuf = malloc(sizeof(DATE_FORMAT));
+				strftime(tbuf, LEN(DATE_FORMAT), DATE_FORMAT, localtime(&tnow));
 				PUTS(tbuf);
 				free(tbuf);
 				break;
