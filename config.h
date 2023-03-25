@@ -26,9 +26,11 @@ const char  ESCAPE    = '\x1B';
 
 // PCI
 #define L_PCI "libpci.so.3"
-// #define PCI PCI_FULL // use libpci (requires libpci)  
-// #define PCI PCI_DL // use libdl to load in libpci if available (requires libdl)  
-#define PCI PCI_NONE // disable libpci (default)  
+#ifndef PCI
+	#define PCI PCI_FULL // use libpci (requires libpci)  
+	// #define PCI PCI_DL // use libdl to load in libpci if available (requires libdl)  
+	// #define PCI PCI_NONE // disable libpci (default)  
+#endif
 
 // Localization
 #define PKG_PACMAN "pacman"

@@ -62,7 +62,9 @@ int main(int argc, char *argv[]) {
 	// Parse command line arguments
 	if (argc == 1) goto l_argend; // There are none, skip to end
 	for (int i = 1; i < argc; ++i) {
-		if (argv[i][0] == '-') { // flag switch
+		if (argv[i][0] == '\0')
+			continue;
+		else if (argv[i][0] == '-') { // flag switch
 			switch (argv[i][1]) {
 				case 'h':
 				case 'H':
