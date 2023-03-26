@@ -15,6 +15,7 @@
 	#include <dirent.h>
 	#include <pwd.h>
 	#include <time.h>
+	#include <unistd.h>
 
 	#include <sys/sysinfo.h>
 	#include <sys/utsname.h>
@@ -24,10 +25,6 @@
 	#define PUTS(s) fputs((s), stdout)
 	#define ESCS(s) putchar(ESCAPE), PUTS(s)
 	#define LEN(n) (sizeof(n) / sizeof(n[0]))
-
-	// So I don't have to include all of uinstd.h
-	extern uid_t getuid(void);
-	extern uid_t geteuid(void);
 
 /* Variable Definitions */
 
@@ -218,13 +215,7 @@ int main(int argc, char *argv[]) {
 	l_distro_end:
 	
 	if (do_themeing) ESCS(THEME);
-	/*
-	PUTS(pwd->pw_name);
-	PUTC('@');
-	PUTS(uts->nodename); 
-	PUTC('\n');
-	*/
-
+	
 	register unsigned char it = 0;
 	register unsigned char asciioffset = 0;
 	while (1) {
