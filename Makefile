@@ -10,7 +10,6 @@ else
 endif
 
 build: 
-	echo $(CFLAGS)
 	"$(CC)" $(SOURCE) -o "$(NAME)" $(CFLAGS)
 
 install:
