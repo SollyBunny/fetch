@@ -42,10 +42,11 @@
 	struct sysinfo *sys = NULL;
 	struct utsname *uts = NULL;
 
-	unsigned char do_themeing   = 1;
-	unsigned char do_custominfo = 0;
+	unsigned char do_themeing     = 1;
+	unsigned char do_custominfo   = 0;
+	unsigned char do_customdistro = 0;
 
-	char        *distro_name  = NULL;
+	char        *distro       = NULL;
 	const char  *distro_col   = NULL;
 	const ASCII *distro_ascii = NULL;
 
@@ -149,19 +150,18 @@ int main(int argc, char *argv[]) {
 					break;
 			}
 		} else {
-			if (distro_name == NULL) {
-				distro_name = argv[i];
-			} else {
+			if (distro != NULL)
 				PUTS("Multiple distro names given!\n");
-			}
+			else
+				do_customdistro = 1;
+			distro = argv[i];
 		}
 	}
 	l_argend:
 
 	if (do_themeing != 2) { // check for COLOR envvar
 		char *color = getenv("COLOR");
-		if (color)
-			THEME = color;
+		if (color) THEME = color;
 	}
 
 	pwd = getpwuid(getuid());
@@ -172,48 +172,50 @@ int main(int argc, char *argv[]) {
 
 	register unsigned int i = 0;
 
-	if (distro_name != NULL) {
-		goto l_distro_name_match;
-	} else if ((file = fopen(L_RELEASE, "r")) != NULL) {
+	if (distro == NULL) {
+		if ((file = fopen(L_RELEASE, "r")) == NULL)
+			goto l_distro_fail;
 		while ((c = fgetc(file)) != '"') {;} // wait till first "
 		i = 1;
 		while ((c = fgetc(file)) != '"') ++i;
-		distro_name = malloc(i * sizeof(char));
+		distro = malloc(i * sizeof(char));
 		fseek(file, -((int)i), SEEK_CUR);
 		while ((c = fgetc(file)) != '"') {
-			*distro_name = c;
-			++distro_name;
+			*distro = c;
+			++distro;
 		}
-		*distro_name = '\0';
-		distro_name -= i;
-		++distro_name;
+		*distro = '\0';
+		distro -= i;
+		++distro;
 		fclose(file);
-		l_distro_name_match: // find matching data
-		for (i = 1; i < (sizeof(distroinfo) / sizeof(distroinfo[0])); ++i) {
-			// compare distro_name & distroinfo[i].name
-			#define s1 distro_name
-			#define s2 distroinfo[i].name
-				m = 0;
-				do {
-					if (
-						s1[m] != s2[m]
-						&& s1[m] + ('A' - 'a') != s2[m] // account for case differences
-						&& s1[m] != s2[m] + ('A' - 'a')
-					)  goto l_distro_name_loop_end;
-					++m;	
-				} while (s1[m] != '\0' && s2[m] != '\0');
-			#undef s1
-			#undef s2
-			distro_col   = distroinfo[i].theme;
-			distro_ascii = &(distroinfo[i].ascii);
-			goto l_distro_name_end;
-			
-		l_distro_name_loop_end: continue; } // continue for old gcc compat
-		// no matches
 	}
+	// find matching data
+	for (i = 1; i < (sizeof(distroinfo) / sizeof(distroinfo[0])); ++i) {
+		// compare distro & distroinfo[i].name
+		#define s1 distro
+		#define s2 distroinfo[i].name
+			m = 0;
+			do {
+				if (
+					s1[m] != s2[m]
+					&& s1[m] + ('A' - 'a') != s2[m] // account for case differences
+					&& s1[m] != s2[m] + ('A' - 'a')
+				) goto l_distro_continue;
+				++m;	
+			} while (s1[m] != '\0' && s2[m] != '\0');
+		#undef s1
+		#undef s2
+		distro_col   = distroinfo[i].theme;
+		distro_ascii = &(distroinfo[i].ascii);
+		goto l_distro_end;
+	l_distro_continue: continue; } // continue for old gcc compat
+
+	l_distro_fail:
+
 	distro_col   = THEME;
 	distro_ascii = &(distroinfo[0].ascii);
-	l_distro_name_end:
+
+	l_distro_end:
 	
 	if (do_themeing) ESCS(THEME);
 	/*
@@ -246,7 +248,7 @@ int main(int argc, char *argv[]) {
 				PUTS(INFO_NAME_OS);
 				PUTS(SEPERATOR);
 				if (do_themeing) ESCS(THEME);
-				PUTS((distro_name == NULL) ? distroinfo[0].name : distro_name);
+				PUTS((distro == NULL) ? distroinfo[0].name : distro);
 				PUTC(' ');
 				PUTS(uts->machine);
 				break;
@@ -451,10 +453,10 @@ int main(int argc, char *argv[]) {
 	
 	if (do_themeing) ESCS(THEMER);
 
-	if (do_custominfo == 1   ) free(info       );
-	if (distro_name   != NULL) free(distro_name);
-	if (sys           != NULL) free(sys        );
-	if (uts           != NULL) free(uts        );
+	if (do_custominfo   == 1   ) free(info  );
+	if (do_customdistro == 0   ) free(distro);
+	if (sys             != NULL) free(sys   );
+	if (uts             != NULL) free(uts   );
 
 	#if PCI != PCI_NONE
 		if (pcihandle != NULL) {
@@ -470,7 +472,7 @@ int main(int argc, char *argv[]) {
 
 	return 0;
 
-	#if PCI != PCI_NONE
+	#if PCI != PCI_DL
 		GPU_err:
 			pcihandle = NULL;
 			pciused = 1;
